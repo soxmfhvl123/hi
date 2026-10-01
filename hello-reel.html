@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Hello — Word Cloud Flow</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gugi&family=DotGothic16&family=Yusei+Magic&family=Hachi+Maru+Pop&family=Reggae+One&family=Long+Cang&family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&family=Zhi+Mang+Xing&family=Righteous&family=Bungee&family=Monoton&family=Bangers&family=Luckiest+Guy&family=Fascinate&family=Bungee+Shade&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#FF2E00;
+    --accent-a:#FFEB00;
+    --accent-b:#1A0040;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html,body{ width:100%; height:100%; background:#000; overflow:hidden; }
+
+  #app{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  #stage{
+    position:relative;
+    width:1920px; height:1080px;
+    flex:none;
+    overflow:hidden;
+    background:var(--bg);
+    transition:background-color 1s ease;
+    transform-origin:center center;
+  }
+
+  .rows{
+    position:absolute; inset:0;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .row{
+    position:relative;
+    flex:1 1 0;
+    overflow:visible;
+  }
+
+  .row-track{
+    position:absolute; top:0; left:0; height:100%;
+    display:flex;
+    align-items:center;
+    white-space:nowrap;
+    will-change:transform;
+  }
+
+  .cloud-word{
+    display:inline-flex;
+    align-items:baseline;
+    gap:4px;
+    line-height:1;
+    padding:0 20px;
+    color:var(--accent-a);
+    transition:color 1s ease;
+    white-space:nowrap;
+  }
+  .cloud-word[data-accent="b"]{ color:var(--accent-b); }
+
+  .cchar{
+    display:inline-block;
+    transform-origin:50% 60%;
+  }
+
+  @keyframes fontPulse{
+    0%   { transform:scaleX(1)    scaleY(1); }
+    25%  { transform:scaleX(1.28) scaleY(.86); }
+    50%  { transform:scaleX(.82)  scaleY(1.22); }
+    75%  { transform:scaleX(1.14) scaleY(.9); }
+    100% { transform:scaleX(1)    scaleY(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cchar{ animation:none !important; transform:none !important; }
+  }
+
+  .tick{ position:absolute; width:34px; height:34px; border:1px solid rgba(255,255,255,.22); z-index:6; }
+  .tick.tl{ top:56px; left:56px; border-right:none; border-bottom:none; }
+  .tick.tr{ top:56px; right:56px; border-left:none; border-bottom:none; }
+  .tick.bl{ bottom:56px; left:56px; border-right:none; border-top:none; }
+  .tick.br{ bottom:56px; right:56px; border-left:none; border-top:none; }
+
+  .grain{
+    position:absolute; inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:.06;
+    mix-blend-mode:overlay;
+    pointer-events:none;
+    z-index:5;
+  }
+
+  @keyframes scrollLeft{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .row-track{ animation-play-state:paused !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="stage">
+
+    <div class="rows" id="rows">
+      <div class="row"><div class="row-track" id="row0"></div></div>
+      <div class="row"><div class="row-track" id="row1"></div></div>
+      <div class="row"><div class="row-track" id="row2"></div></div>
+      <div class="row"><div class="row-track" id="row3"></div></div>
+      <div class="row"><div class="row-track" id="row4"></div></div>
+      <div class="row"><div class="row-track" id="row5"></div></div>
+    </div>
+
+    <div class="tick tl"></div>
+    <div class="tick tr"></div>
+    <div class="tick bl"></div>
+    <div class="tick br"></div>
+    <div class="grain"></div>
+  </div>
+</div>
+
+<script>
+  function fitStage(){
+    var stage = document.getElementById('stage');
+    var scale = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    stage.style.transform = 'scale(' + scale + ')';
+  }
+  window.addEventListener('resize', fitStage);
+  fitStage();
+
+  var LATIN    = ['Righteous','Bungee','Monoton','Bangers','Luckiest Guy','Fascinate','Bungee Shade'];
+  var KOREAN   = ['Black Han Sans','Do Hyeon','Jua','Gugi'];
+  var JAPANESE = ['DotGothic16','Yusei Magic','Hachi Maru Pop','Reggae One'];
+  var CHINESE  = ['Long Cang','Ma Shan Zheng','Liu Jian Mao Cao','Zhi Mang Xing'];
+
+  var POOLS = { LATIN:LATIN, KOREAN:KOREAN, JAPANESE:JAPANESE, CHINESE:CHINESE };
+
+  var WORDS = [
+    { text:'안녕하세요', poolKey:'KOREAN',   spacing:'.03em' },
+    { text:'Hello',      poolKey:'LATIN',    spacing:'0' },
+    { text:'こんにちは',   poolKey:'JAPANESE', spacing:'.04em' },
+    { text:'你好',        poolKey:'CHINESE',  spacing:'.04em' },
+    { text:'Bonjour',    poolKey:'LATIN',    spacing:'0' },
+    { text:'Hola',       poolKey:'LATIN',    spacing:'0' },
+    { text:'Hallo',      poolKey:'LATIN',    spacing:'0' },
+    { text:'Ciao',       poolKey:'LATIN',    spacing:'0' }
+  ];
+
+  var THEMES = [
+    { bg:'#FF2E00', a:'#FFEB00', b:'#1A0040' },
+    { bg:'#0033FF', a:'#FF5500', b:'#00FFE0' },
+    { bg:'#FF0080', a:'#2B0044', b:'#FFEB00' },
+    { bg:'#FFCF00', a:'#E10600', b:'#2E0080' },
+    { bg:'#6E00FF', a:'#00FFE0', b:'#FF6200' },
+    { bg:'#FF6200', a:'#1A0040', b:'#FFCF00' },
+    { bg:'#2E0080', a:'#00F5D4', b:'#FF0080' }
+  ];
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  var rowConfigs = [
+    { id:'row0', baseSize:200, speed:120 },
+    { id:'row1', baseSize:300, speed:165 },
+    { id:'row2', baseSize:165, speed: 95 },
+    { id:'row3', baseSize:245, speed:145 },
+    { id:'row4', baseSize:190, speed:110 },
+    { id:'row5', baseSize:270, speed:150 }
+  ];
+
+  function buildRowSet(count){
+    var frag = document.createDocumentFragment();
+    var lastText = null;
+    for (var i=0;i<count;i++){
+      var w = pick(WORDS);
+      var tries = 0;
+      while (w.text === lastText && tries < 8){
+        w = pick(WORDS);
+        tries++;
+      }
+      lastText = w.text;
+
+      var wrap = document.createElement('span');
+      wrap.className = 'cloud-word';
+      wrap.dataset.accent = Math.random() < 0.5 ? 'a' : 'b';
+      wrap.style.letterSpacing = w.spacing;
+      wrap.dataset.variance = (0.72 + Math.random()*0.56).toFixed(3);
+
+      Array.from(w.text).forEach(function(ch){
+        var cspan = document.createElement('span');
+        cspan.className = 'cchar';
+        cspan.textContent = ch;
+        cspan.dataset.pool = w.poolKey;
+        cspan.style.fontFamily = "'" + pick(POOLS[w.poolKey]) + "'";
+        var dur = (1.6 + Math.random()*2.0).toFixed(2);
+        var delay = (Math.random()*3).toFixed(2);
+        cspan.style.animation = 'fontPulse ' + dur + 's ease-in-out ' + delay + 's infinite';
+        wrap.appendChild(cspan);
+      });
+
+      frag.appendChild(wrap);
+    }
+    return frag;
+  }
+
+  function initRow(cfg){
+    var track = document.getElementById(cfg.id);
+    var COUNT = 26;
+    var set = buildRowSet(COUNT);
+    var set2 = set.cloneNode(true);
+    track.appendChild(set);
+    track.appendChild(set2);
+    track.querySelectorAll('.cloud-word').forEach(function(el){
+      el.style.fontSize = (cfg.baseSize * parseFloat(el.dataset.variance)) + 'px';
+    });
+    return track;
+  }
+
+  var tracks = rowConfigs.map(initRow);
+
+  var allChars = [];
+  tracks.forEach(function(track){
+    allChars = allChars.concat(Array.prototype.slice.call(track.querySelectorAll('.cchar')));
+  });
+
+  function startScroll(){
+    tracks.forEach(function(track, i){
+      var cfg = rowConfigs[i];
+      var setWidth = track.scrollWidth / 2;
+      var duration = setWidth / cfg.speed;
+      track.style.animation = 'scrollLeft ' + duration + 's linear infinite';
+    });
+  }
+
+  function lockWidths(){
+    var stage = document.getElementById('stage');
+    var prevTransform = stage.style.transform;
+    stage.style.transform = 'none';
+    allChars.forEach(function(el){
+      var w = el.getBoundingClientRect().width;
+      el.style.width = (w * 1.25) + 'px';
+      el.style.textAlign = 'center';
+    });
+    stage.style.transform = prevTransform;
+  }
+
+  function startFontSwap(){
+    allChars.forEach(function(el){
+      var poolKey = el.dataset.pool;
+      function swap(){
+        el.style.fontFamily = "'" + pick(POOLS[poolKey]) + "'";
+      }
+      setTimeout(function(){
+        swap();
+        setInterval(swap, 2600 + Math.random()*1200);
+      }, Math.random()*2600);
+    });
+  }
+
+  function init(){
+    lockWidths();
+    fitStage();
+    startScroll();
+    startFontSwap();
+  }
+
+  if (document.fonts && document.fonts.ready){
+    document.fonts.ready.then(init);
+  } else {
+    window.addEventListener('load', init);
+  }
+
+  var themeIdx = 0;
+  function applyTheme(){
+    var t = THEMES[themeIdx % THEMES.length];
+    document.documentElement.style.setProperty('--bg', t.bg);
+    document.documentElement.style.setProperty('--accent-a', t.a);
+    document.documentElement.style.setProperty('--accent-b', t.b);
+    themeIdx++;
+  }
+  applyTheme();
+  setInterval(applyTheme, 4500);
+</script>
+
+</body>
+</html>
