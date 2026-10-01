@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gugi&family=DotGothic16&family=Yusei+Magic&family=Hachi+Maru+Pop&family=Reggae+One&family=Long+Cang&family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&family=Zhi+Mang+Xing&family=Righteous&family=Bungee&family=Monoton&family=Bangers&family=Luckiest+Guy&family=Fascinate&family=Bungee+Shade&display=swap" rel="stylesheet">
+<!-- variable fonts: wght / wdth axes animated below -->
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,100..900&family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&family=Noto+Sans+KR:wght@100..900&family=M+PLUS+1:wght@100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" rel="stylesheet">
 
 <style>
   :root{
@@ -79,6 +81,13 @@
     100% { transform:scaleX(1)    scaleY(1); }
   }
 
+  /* static fonts ignore font-variation-settings, so this only moves variable fonts */
+  @keyframes fontFlex{
+    0%   { font-variation-settings:"wght" 100, "wdth" 60; }
+    50%  { font-variation-settings:"wght" 900, "wdth" 140; }
+    100% { font-variation-settings:"wght" 100, "wdth" 60; }
+  }
+
   @media (prefers-reduced-motion: reduce){
     .cchar{ animation:none !important; transform:none !important; }
   }
@@ -146,6 +155,18 @@
 
   var POOLS = { LATIN:LATIN, KOREAN:KOREAN, JAPANESE:JAPANESE, CHINESE:CHINESE };
 
+  var VARIABLE = {
+    LATIN:    ['Anybody','Roboto Flex'],
+    KOREAN:   ['Noto Sans KR'],
+    JAPANESE: ['M PLUS 1'],
+    CHINESE:  ['Noto Sans SC','Noto Serif SC']
+  };
+
+  // half the time land on a variable font so the weight/width animation is visible
+  function pickFont(poolKey){
+    return Math.random() < 0.5 ? pick(VARIABLE[poolKey]) : pick(POOLS[poolKey]);
+  }
+
   var WORDS = [
     { text:'안녕하세요', poolKey:'KOREAN',   spacing:'.03em' },
     { text:'Hello',      poolKey:'LATIN',    spacing:'0' },
@@ -201,10 +222,12 @@
         cspan.className = 'cchar';
         cspan.textContent = ch;
         cspan.dataset.pool = w.poolKey;
-        cspan.style.fontFamily = "'" + pick(POOLS[w.poolKey]) + "'";
+        cspan.style.fontFamily = "'" + pickFont(w.poolKey) + "'";
         var dur = (1.6 + Math.random()*2.0).toFixed(2);
         var delay = (Math.random()*3).toFixed(2);
-        cspan.style.animation = 'fontPulse ' + dur + 's ease-in-out ' + delay + 's infinite';
+        var flexDur = (1.2 + Math.random()*1.6).toFixed(2);
+        cspan.style.animation = 'fontPulse ' + dur + 's ease-in-out ' + delay + 's infinite, ' +
+                                'fontFlex ' + flexDur + 's ease-in-out ' + delay + 's infinite';
         wrap.appendChild(cspan);
       });
 
@@ -258,7 +281,7 @@
     allChars.forEach(function(el){
       var poolKey = el.dataset.pool;
       function swap(){
-        el.style.fontFamily = "'" + pick(POOLS[poolKey]) + "'";
+        el.style.fontFamily = "'" + pickFont(poolKey) + "'";
       }
       setTimeout(function(){
         swap();
