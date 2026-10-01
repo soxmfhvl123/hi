@@ -142,7 +142,9 @@
 <script>
   function fitStage(){
     var stage = document.getElementById('stage');
-    var scale = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    // keep height at 1080 and stretch width to the viewport's aspect so there is no letterboxing
+    var scale = window.innerHeight/1080;
+    stage.style.width = (window.innerWidth/scale) + 'px';
     stage.style.transform = 'scale(' + scale + ')';
   }
   window.addEventListener('resize', fitStage);
