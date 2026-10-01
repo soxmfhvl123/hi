@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&family=Gugi&family=DotGothic16&family=Yusei+Magic&family=Hachi+Maru+Pop&family=Reggae+One&family=Long+Cang&family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&family=Zhi+Mang+Xing&family=Righteous&family=Bungee&family=Monoton&family=Bangers&family=Luckiest+Guy&family=Fascinate&family=Bungee+Shade&display=swap" rel="stylesheet">
+<link href="fonts/fonts.css" rel="stylesheet">
 <!-- variable fonts: wght / wdth axes animated below -->
 <link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,100..900&family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&family=Noto+Sans+KR:wght@100..900&family=M+PLUS+1:wght@100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" rel="stylesheet">
 
@@ -150,7 +151,9 @@
   window.addEventListener('resize', fitStage);
   fitStage();
 
-  var LATIN    = ['Righteous','Bungee','Monoton','Bangers','Luckiest Guy','Fascinate','Bungee Shade'];
+  var LATIN    = ['Righteous','Bungee','Monoton','Bangers','Luckiest Guy','Fascinate','Bungee Shade',
+                  // local (fonts/fonts.css)
+                  'Monsieur La Doulaise'];
   var KOREAN   = ['Black Han Sans','Do Hyeon','Jua','Gugi'];
   var JAPANESE = ['DotGothic16','Yusei Magic','Hachi Maru Pop','Reggae One'];
   var CHINESE  = ['Long Cang','Ma Shan Zheng','Liu Jian Mao Cao','Zhi Mang Xing'];
@@ -158,7 +161,7 @@
   var POOLS = { LATIN:LATIN, KOREAN:KOREAN, JAPANESE:JAPANESE, CHINESE:CHINESE };
 
   var VARIABLE = {
-    LATIN:    ['Anybody','Roboto Flex'],
+    LATIN:    ['Anybody','Roboto Flex','Heebo'],
     KOREAN:   ['Noto Sans KR'],
     JAPANESE: ['M PLUS 1'],
     CHINESE:  ['Noto Sans SC','Noto Serif SC']
@@ -299,8 +302,17 @@
     startFontSwap();
   }
 
-  if (document.fonts && document.fonts.ready){
-    document.fonts.ready.then(init);
+  // fonts are swapped in later, so load every family up front (capped at 5s) to avoid fallback flashes
+  if (document.fonts && document.fonts.load){
+    var families = [];
+    Object.keys(POOLS).forEach(function(k){ families = families.concat(POOLS[k], VARIABLE[k]); });
+    var loads = families.map(function(f){
+      return document.fonts.load("100px '" + f + "'").catch(function(){});
+    });
+    var started = false;
+    function initOnce(){ if (!started){ started = true; init(); } }
+    Promise.all(loads).then(initOnce);
+    setTimeout(initOnce, 5000);
   } else {
     window.addEventListener('load', init);
   }

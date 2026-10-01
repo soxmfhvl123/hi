@@ -1,0 +1,10 @@
+# raw font downloads stay local; only the copies in fonts/ are published
+.DS_Store
+*.ttf
+*.otf
+*.woff
+*.woff2
+*.eot
+ZNVT*/
+PP®F Fonts/
+!fonts/**
